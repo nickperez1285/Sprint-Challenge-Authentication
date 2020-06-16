@@ -1,69 +1,65 @@
 const request = require('supertest');
-const auth = require('./auth-router')
+// const auth = require('./auth-router')
 const db = require('../database/dbConfig')
+const server = require('../api/server');
 
 
- // let token;
 
- //  beforeEach(async () => {
- //    await db("users").truncate();
- //      request(auth)
- //        .post('/login')
- //        .send({
- //          username: "test",
- //         password: "test"
- //        } 
- //        )
- //        .end((err, response) => {
- //          token = response.body.token; // save the token!
- //          console.log('token',token)
- //          done();
- //        });
- //    });
+beforeEach(async () => {
+    await db.migrate.rollback();
+    await db.migrate.latest();
+    await db.seed.run();
+
+});
 
 describe('auth-router', () => {
-	   describe('post /register', () => {
+    describe('Post /register', () => {
         it('should return 201 ', async () => {
-            return request(auth)
-                .post('/register')
-             	 .then(res => {
-                    expect(res.status).toBe(201);
-                })
-        })
-	})
-	//    describe('post /register', () => {
- //        it('should return 201 if logeed in',  () => {
- //            return request(auth)
- //                .post('/resister')
- //                .then(res => {
- //                    expect(res.status).toBe(201);
- //                      // expect(response.type).toBe('application/json');
+        	jest.setTimeout(1000)
+            const response = await request(server)
+                .post('/api/auth/register')
+                .send({
+                	// change username on everytest 
+                    username: `test${Date.now}`,
+                    password: 'test'
+                });
+            expect(response.status).toBe(201);
+        });
 
- //                })
- //        })
+        it('and gives back 401 error if missing credentials ', async () => {
+        	      jest.setTimeout(1000)
 
-	// }),
-	//     describe('GET api/jokes', () => {
- //        it('Should require login ', () => {
- //            return request(server)
- //                .get('/')
- //                .then(res => {
- //                    expect(res.status).toBe(404);
- //                })
- //        })
+            const response = await request(server)
+                .post('/api/auth/register')
+                .send({
+                    username: '',
+                    password: '',
+                });
 
-	// })
-	
-	 
+            expect(response.status).toBe(201);
+        });
+    });
+});
 
+describe('Login', () => {
+    describe('POST /login', () => {
 
- //        it('should return all data in JSON', () => {
- //            return request(server)
- //                .get('/users')
- //                .then(res => {
- //                    expect(res.type).toMatch(/json/)
- //                    expect(res.type).toBe('application/json');
- //                })
- //        })
+        it('returns undefined if no username or password set ', () => {
+            const response =  request(server).post('/api/auth/login');
+            expect(response.status).toBe(undefined);
+          
+        });
 
-})
+        it('returns 401 if if invalid user credentials', async () => {
+            const response = await request(server)
+                .post('/api/auth/login')
+                .send({
+                    username: 'test',
+                    password: 'wrongtest',
+                });
+            expect(response.status).toBe(401);
+       
+        });
+
+    });
+});
